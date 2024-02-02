@@ -1,0 +1,13 @@
+{
+  "name": "HelpDeskSupportSystem",
+  "private": true,
+  "workspaces": [
+    "packages/back-end"
+  ],
+  "devDependencies": {
+    "@faker-js/faker": "^7.6.0",
+    "concurrently": "^7.6.0",
+    "cross-env": "^7.0.3",
+    "nodemon": "^2.0.20"
+  }
+}
