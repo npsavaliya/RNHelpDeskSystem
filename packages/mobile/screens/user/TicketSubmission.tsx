@@ -1,90 +1,98 @@
 import * as React from 'react';
 import {StatusBar} from 'expo-status-bar';
 import {
-  View,
-  TextStyle,
-  Text,
-  ViewStyle,
-  Alert,
   ScrollView,
   KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {StackScreens} from '../../App';
-import {TextField, Button, DropdownComponent, DataItem} from '../../components';
-import {fontScale, scale} from '../../utils/sizes';
-import {colors} from '../../theme';
 import {createTicket, updateTicket} from '../../services/api';
-import {isNonEmptyString} from '../../utils/common';
 import { GlobalContext } from '../../contexts/global.context';
-import { Ticket } from '../../types/types';
+import { Attachment, Status, Ticket } from '../../types/types';
 import * as DocumentPicker from 'expo-document-picker';
+import { styles } from './ticketSubmissionStyle';
+import Toast from 'react-native-root-toast';
+import { colors } from '../../theme';
+import { TicketForm } from '../../components/TicketForm';
+
+type UpdateCallbackType = 'name' | 'email' | 'description' | 'serviceReply' | 'status';
 
 /**
  * Create new ticket by customer or reply to ticket by service team
  */
-export default function TicketSubmission({navigation, route}: NativeStackScreenProps<StackScreens, 'TicketSubmission'>) {
+export default function TicketSubmission({navigation, route}: NativeStackScreenProps<StackScreens, ('TicketSubmission' | 'TicketReview')>) {
 
   const { user } = React.useContext(GlobalContext);
 
   const {ticket = null} = route.params ?? {};
 
-  const nameInputRef = React.useRef<any>();
-  const emailInputRef = React.useRef<any>();
-  const descriptionInputRef = React.useRef<any>();
-  const serviceReplyInputRef = React.useRef<any>();
-
   const [name, setName] = React.useState(ticket?.name ?? '');
   const [email, setEmail] = React.useState(ticket?.email ?? '');
   const [description, setDescription] = React.useState(ticket?.description ?? '');
-  const [attachment, setAttachment] = React.useState('');
+  const [attachment, setAttachment] = React.useState<Attachment | null>(null);
   const [serviceReply, setServiceReply] = React.useState(ticket?.serviceReply ?? '');
   const [status, setStatus] = React.useState(ticket?.status ?? 'new');
-  const [statusData, setStatusData] = React.useState<DataItem[]>([
-    {label: 'new', value: 'new'},
-    {label: 'in progress', value: 'in progress'},
-    {label: 'resolved', value: 'resolved'},
-  ])
-
-  const clearForm = () => {
-    setName('');
-    setEmail('');
-    setDescription('');
-    setAttachment('');
-  };
 
   const showIssueSubmissionSuccessMessage = () => {
-    Alert.alert(
-      'Success',
-      'Issue submitted successfully', [
-        {text: 'OK', onPress: navigation.goBack},
-      ]);
+    Toast.show('Issue submitted successfully', {
+      duration: Toast.durations.SHORT,
+      position: Toast.positions.TOP,
+      shadow: true,
+      animation: true,
+      hideOnPress: true,
+      delay: 0,
+      textColor: colors.palette.green500,
+    });
+
+    setTimeout(() => {
+      navigation.goBack();
+    }, 1000);
   };
 
   const showIssueSubmissionFailureMessage = (errorMessage: string) => {
     const message = errorMessage || 'Failed to submit issue. Please try agin';
 
-    Alert.alert(
-      'Failure',
-      message, [
-        {text: 'OK', onPress: clearForm},
-      ]);
+    Toast.show(message, {
+      duration: Toast.durations.SHORT,
+      position: Toast.positions.TOP,
+      shadow: true,
+      animation: true,
+      hideOnPress: true,
+      delay: 0,
+      textColor: colors.error
+    });
   }
 
-  const onChangeStatus = React.useCallback((statusItem: DataItem) => {
-    setStatus(statusItem.value);
+  const onUpdate = React.useCallback((field: UpdateCallbackType) => (value: string) => {
+    if (field === 'name') {
+      setName(value);
+    } else if (field === 'email') {
+      setEmail(value);
+    } else if (field === 'description') {
+      setDescription(value);
+    } else if (field === 'serviceReply') {
+      setServiceReply(value);
+    } else if (field === 'status') {
+      setStatus(value as Status);
+    }
   }, []);
 
   const attach = () => {
     DocumentPicker.getDocumentAsync()
     .then((value: DocumentPicker.DocumentPickerResult) => {
-      setAttachment(value?.assets?.[0]?.name ?? '');
+      setAttachment(value?.assets?.[0] ?? null);
     })
     .catch((reason: any) => {
-      Alert.alert(
-        'Failure',
-        'Failed to attach document, please try again'
-      );
+      Toast.show('Failed to attach document, please try again', {
+        duration: Toast.durations.SHORT,
+        position: Toast.positions.TOP,
+        shadow: true,
+        animation: true,
+        hideOnPress: true,
+        delay: 0,
+        textColor: colors.error
+      });
     })
   }
 
@@ -124,19 +132,13 @@ export default function TicketSubmission({navigation, route}: NativeStackScreenP
         }
 
         showIssueSubmissionFailureMessage('');
-
-        // focus username input to try refilling the form
-        nameInputRef.current.focus();
       } catch (error) {
+        // console.log('create ticket error --- ', error);
+        // console.log('create ticket error --- ', JSON.stringify(error));
         showIssueSubmissionFailureMessage('');
-
-        // focus username input to try refilling the form
-        nameInputRef.current.focus();
       }
     }, []);
 
-  // name and email field are mendatory in validation for submission
-  const disabled = !(isNonEmptyString(name) && isNonEmptyString(email));
   const submitTicketCall = submitTicket({
     name,
     email,
@@ -150,177 +152,29 @@ export default function TicketSubmission({navigation, route}: NativeStackScreenP
 
   return (
     <KeyboardAvoidingView
-      behavior="padding"
+      behavior={Platform.OS === 'android' ? undefined : "padding"}
       enabled
-      style={$wrapper}
+      style={styles.wrapper}
     >
       <StatusBar style="auto" />
-      <ScrollView contentContainerStyle={$container}>
-        <TextField
-          ref={nameInputRef}
-          editable={!ticket}
-          value={name}
-          onChangeText={(text: string) => setName(text)}
-          autoCapitalize="none"
-          autoCorrect={false}
-          label="Name"
-          placeholder="Enter"
-          placeholderTextColor={"rgba(255, 255, 255, 0.24)"}
-          containerStyle={[$textFieldContainerStyle, { marginTop: scale(20) }]}
-          inputWrapperStyle={$textFieldBox}
-          LabelTextProps={{
-            style: $labelStyle,
-          }}
-          style={$inputStyle}
-          onSubmitEditing={() => emailInputRef.current.focus()}
-        />
-        <TextField
-          editable={!ticket}
-          ref={emailInputRef}
-          value={email}
-          onChangeText={(text: string) => setEmail(text)}
-          autoCapitalize="none"
-          autoComplete="email"
-          autoCorrect={false}
-          keyboardType="email-address"
-          label="Email"
-          placeholder="Enter"
-          placeholderTextColor={"rgba(255, 255, 255, 0.24)"}
-          containerStyle={[$textFieldContainerStyle, { marginTop: scale(20) }]}
-          inputWrapperStyle={$textFieldBox}
-          LabelTextProps={{
-            style: $labelStyle,
-          }}
-          style={$inputStyle}
-          onSubmitEditing={() => descriptionInputRef.current.focus()}
-        />
-        <TextField
-          editable={!ticket}
-          ref={descriptionInputRef}
-          value={description}
-          onChangeText={(text: string) => setDescription(text)}
-          autoCapitalize="none"
-          autoCorrect={false}
-          label="Description"
-          placeholder="Enter"
-          multiline
-          placeholderTextColor={"rgba(255, 255, 255, 0.24)"}
-          containerStyle={[$textFieldContainerStyle, { marginTop: scale(20) }]}
-          inputWrapperStyle={$textFieldBox}
-          LabelTextProps={{
-            style: $labelStyle,
-          }}
-          style={$inputStyle}
-          onSubmitEditing={() => serviceReplyInputRef.current.focus()}
-        />
-        {!!ticket && (
-          <TextField
-            editable={!!ticket}
-            ref={serviceReplyInputRef}
-            value={serviceReply}
-            multiline
-            onChangeText={(text: string) => setServiceReply(text)}
-            autoCapitalize="none"
-            autoCorrect={false}
-            label="Service Reply"
-            placeholder="Enter"
-            placeholderTextColor={"rgba(255, 255, 255, 0.24)"}
-            containerStyle={[
-              $textFieldContainerStyle,
-              { marginTop: scale(20) },
-            ]}
-            inputWrapperStyle={$textFieldBox}
-            LabelTextProps={{
-              style: $labelStyle,
-            }}
-            style={$inputStyle}
-            onSubmitEditing={submitTicketCall}
-          />
-        )}
-        <DropdownComponent
-          disabled={!ticket}
-          value={status}
-          data={statusData}
-          onChange={onChangeStatus}
-          placeholderText="Please select status"
-        />
-        {!ticket && (
-          <Button
-            text="Attach Files"
-            style={$loginBtnBox}
-            onPress={attach}
-            disabled={disabled}
-          />
-        )}
-        {!!attachment && (
-          <View style={$attachmentNameBox}>
-            <Text style={$attachmentNameText}>{attachment}</Text>
-          </View>
-        )}
-        <Button
-          text="Submit"
-          style={[$loginBtnBox, { marginBottom: scale(20) }]}
-          onPress={submitTicketCall}
-          disabled={disabled}
+      <ScrollView contentContainerStyle={styles.container}>
+        <TicketForm
+          ticket={ticket}
+          name={name}
+          onChangeName={onUpdate('name')}
+          email={email}
+          onChangeEmail={onUpdate('email')}
+          description={description}
+          onChangeDescription={onUpdate('description')}
+          serviceReply={serviceReply}
+          onChangeServiceReply={onUpdate('serviceReply')}
+          status={status}
+          onChangeStatus={onUpdate('status')}
+          attach={attach}
+          attachment={attachment}
+          submit={submitTicketCall}
         />
       </ScrollView>
     </KeyboardAvoidingView>
   );
-}
-
-const $wrapper: ViewStyle = {
-  flex: 1,
-  backgroundColor: colors.background,
-}
-
-const $container: ViewStyle = {
-  alignItems: 'center',
-};
-
-const $loginBtnBox: ViewStyle = {
-  marginTop: scale(20),
-  width: '80%'
-};
-
-const $signInBox: ViewStyle = {
-  alignItems: 'flex-start',
-  marginTop: scale(30),
-};
-
-const $textFieldBox: ViewStyle = {
-  width: '100%',
-  backgroundColor: colors.textFieldBackground,
-  borderWidth: 0,
-};
-
-const $inputStyle: TextStyle = {
-  fontWeight: 'normal',
-  color: colors.text,
-  fontSize: fontScale(16),
-  paddingHorizontal: scale(8),
-  paddingVertical: scale(8),
-  width: '100%',
-};
-
-const $labelStyle: TextStyle = {
-  color: colors.text,
-  fontSize: fontScale(16),
-  lineHeight: scale(19),
-  fontWeight: 'bold',
-  marginBottom: scale(8),
-};
-
-const $textFieldContainerStyle: ViewStyle = {
-  marginTop: scale(30),
-  width: '80%',
-};
-
-const $attachmentNameBox: ViewStyle = {
-  marginVertical: scale(20),
-};
-
-const $attachmentNameText: TextStyle = {
-  fontSize: fontScale(16),
-  color: colors.text,
-  fontWeight: '500'
 }

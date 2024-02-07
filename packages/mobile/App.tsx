@@ -6,7 +6,7 @@ import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import Login from './screens/auth/Login';
 import { fetchUser, storageKeys } from './utils/storage';
-import { Ticket, User } from './types/types';
+import { Attachment, Ticket, User } from './types/types';
 import { logout } from './services/api';
 import { GlobalContext } from './contexts/global.context';
 import ServiceTickets from './screens/admin/ServiceTickets';
@@ -15,6 +15,8 @@ import TicketSubmission from './screens/user/TicketSubmission';
 import { Button } from './components';
 import { HeaderButtonProps } from '@react-navigation/native-stack/lib/typescript/src/types';
 import { colors } from './theme';
+import { RootSiblingParent } from 'react-native-root-siblings';
+import AttachmentScreen from './screens/webview/WebView';
 
 /**
    * This type allows TypeScript to know what routes are defined in this navigator
@@ -29,6 +31,8 @@ import { colors } from './theme';
 export type StackScreens = {
   MyTickets: undefined;
   TicketSubmission: {ticket?: Ticket} | undefined;
+  TicketReview: {ticket?: Ticket} | undefined;
+  AttachmentScreen: {attachment?: Attachment};
   Login: undefined;
   Register: undefined;
   App: undefined;
@@ -75,38 +79,58 @@ export default function App() {
       <GlobalContext.Provider
         value={{ user, checkLogin, onLogout: handleLogout }}
       >
-        <View style={styles.container}>
-          <NavigationContainer>
-            <Stack.Navigator screenOptions={{
-              headerRight: user?.id ? () => (
-                  <Button text="Logout" style={styles.logoutButton} textStyle={styles.logoutButtonText} onPress={handleLogout} />
-              ) : undefined
-            }}>
-              {user ? (
-                user.id === 1 ? (
-                  <>
-                    <Stack.Screen
-                      name="ServiceTickets"
-                      component={ServiceTickets}
-                    />
-                    <Stack.Screen name="TicketSubmission" component={TicketSubmission} />
-                  </>
+        <RootSiblingParent>
+          <View style={styles.container}>
+            <NavigationContainer>
+              <Stack.Navigator
+                screenOptions={{
+                  headerRight: user?.id
+                    ? () => (
+                        <Button
+                          text="Logout"
+                          style={styles.logoutButton}
+                          textStyle={styles.logoutButtonText}
+                          onPress={handleLogout}
+                        />
+                      )
+                    : undefined,
+                }}
+              >
+                {user ? (
+                  user.id === 1 ? (
+                    <>
+                      <Stack.Screen
+                        name="ServiceTickets"
+                        component={ServiceTickets}
+                      />
+                      <Stack.Screen
+                        name="TicketReview"
+                        component={TicketSubmission}
+                      />
+                      <Stack.Screen
+                        name="AttachmentScreen"
+                        component={AttachmentScreen}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <Stack.Screen name="MyTickets" component={MyTickets} />
+                      <Stack.Screen
+                        name="TicketSubmission"
+                        component={TicketSubmission}
+                      />
+                    </>
+                  )
                 ) : (
                   <>
-                    <Stack.Screen name="MyTickets" component={MyTickets} />
-                    <Stack.Screen name="TicketSubmission" component={TicketSubmission} />
+                    <Stack.Screen name="Login" component={Login} />
                   </>
-                )
-              ) : (
-             
-                <>
-                  <Stack.Screen name="Login" component={Login} />
-                </>
-              )}
-            </Stack.Navigator>
-          </NavigationContainer>
-          <StatusBar style="auto" />
-        </View>
+                )}
+              </Stack.Navigator>
+            </NavigationContainer>
+            <StatusBar style="auto" />
+          </View>
+        </RootSiblingParent>
       </GlobalContext.Provider>
     </SafeAreaProvider>
   );

@@ -1,5 +1,8 @@
-import { Ticket, User } from "../types/types";
+import ReactNativeBlobUtil from "react-native-blob-util";
+import { Attachment, Ticket, User } from "../types/types";
 import { remove, storageKeys } from "../utils/storage";
+import { Platform } from "react-native";
+import RNFetchBlob from "rn-fetch-blob";
 
 export interface LoginResponse {
   status: 200 | 404;

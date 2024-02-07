@@ -81,6 +81,7 @@ export function Button(props: ButtonProps) {
 
 const $baseViewStyle: ViewStyle = {
   paddingVertical: scale(14),
+  borderRadius: scale(6),
   paddingHorizontal: scale(12),
   justifyContent: 'center',
   alignItems: 'center',

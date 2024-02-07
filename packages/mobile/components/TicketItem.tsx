@@ -10,7 +10,7 @@ import {
 import { colors } from '../theme';
 import { Text } from './Text';
 import { fontScale, metrics, scale } from '../utils/sizes';
-import { Ticket } from '../types/types';
+import { Attachment, Ticket } from '../types/types';
 
 export interface TicketItemProps {
   /**
@@ -25,6 +25,10 @@ export interface TicketItemProps {
    * onPress
    */
   onPress?: ((event: GestureResponderEvent) => void) | undefined
+  /**
+   * onPress
+   */
+  onPressAttachment?: ((attachment: Attachment) => void) | undefined
   
 }
 
@@ -39,6 +43,7 @@ export const TicketItem = (props: TicketItemProps) => {
     ticket,
     containerStyle: $containerStyleOverride,
     onPress,
+    onPressAttachment,
   } = props;
 
   const $containerStyles = [$container, $containerStyleOverride];
@@ -75,18 +80,19 @@ export const TicketItem = (props: TicketItemProps) => {
           />
         </View>
       )}
-      {!!ticket?.attachment && (
-        <View style={$view}>
+      {!!ticket?.attachment?.name && (
+        <TouchableOpacity style={$view}
+          onPress={() => onPressAttachment?.(ticket.attachment as Attachment)}>
           <Text
-            text={`Attachment: ${ticket.attachment}`}
+            text={`Attachment: ${ticket.attachment?.name}`}
             style={$text}
           />
-        </View>
+        </TouchableOpacity>
       )}
       {!!ticket?.serviceReply && (
         <View style={$view}>
           <Text
-            text={`Reply: ${ticket.serviceReply}`}
+            text={`Customer Care Response: ${ticket.serviceReply}`}
             style={$text}
           />
         </View>
